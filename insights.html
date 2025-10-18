@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insights - Picker</title>
+    <meta name="description" content="Track patterns and gain insights from your substance use data">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1E4D4B">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Core Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#1E4D4B',
+                        'secondary': '#E07A5F',
+                        'accent': '#81B366',
+                        'neutral': '#F4F3F1',
+                        'warning': '#F2CC8F',
+                        'text': '#2C3E50'
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        .nav-tab {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 3px;
+            background: #E07A5F;
+            border-radius: 2px;
+        }
+        
+        .insight-card {
+            transition: all 0.3s ease;
+        }
+        
+        .insight-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(30, 77, 75, 0.15);
+        }
+        
+        .calendar-day {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .calendar-day:hover {
+            background-color: #f3f4f6;
+        }
+        
+        .calendar-day.has-entry {
+            background-color: #81B366;
+            color: white;
+        }
+        
+        .calendar-day.today {
+            border: 2px solid #E07A5F;
+        }
+        
+        .usage-level {
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #E07A5F;
+        }
+        
+        .chart-container {
+            height: 200px;
+            width: 100%;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #1E4D4B 0%, #81B366 100%);
+            color: white;
+        }
+        
+        .alert-card {
+            border-left: 4px solid #F2CC8F;
+            background: #fef3c7;
+        }
+        
+        .trend-up {
+            color: #E07A5F;
+        }
+        
+        .trend-down {
+            color: #81B366;
+        }
+        
+        .filter-tab {
+            transition: all 0.3s ease;
+        }
+        
+        .filter-tab.active {
+            background: #1E4D4B;
+            color: white;
+        }
+        
+        .educational-carousel {
+            background: linear-gradient(135deg, #81B366 0%, #1E4D4B 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .educational-slide {
+            text-align: center;
+        }
+        
+        .educational-slide h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .educational-slide p {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            opacity: 0.95;
+        }
+        
+        .splide__arrow {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 2rem;
+            height: 2rem;
+        }
+        
+        .splide__arrow svg {
+            fill: white;
+        }
+        
+        .advanced-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .advanced-stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .advanced-stat-card .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1E4D4B;
+            margin-bottom: 0.25rem;
+        }
+        
+        .advanced-stat-card .label {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
+        .mood-timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 1rem 0;
+        }
+        
+        .mood-point {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .mood-point .emoji {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .mood-point .label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            text-align: center;
+        }
+        
+        .mood-line {
+            flex: 1;
+            height: 2px;
+            background: #e5e7eb;
+            margin: 0 0.5rem;
+            position: relative;
+        }
+        
+        .mood-line::after {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: 0;
+            height: 4px;
+            background: #81B366;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+        
+        .export-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        
+        .export-btn {
+            background: #1E4D4B;
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .export-btn:hover {
+            background: #2C5F5D;
+            transform: translateY(-1px);
+        }
+        
+        .export-btn.secondary {
+            background: #6b7280;
+        }
+        
+        .export-btn.secondary:hover {
+            background: #4b5563;
+        }
+    </style>
+</head>
+<body class="bg-neutral text-text font-sans pb-20">
+    <!-- Header -->
+    <div class="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-40">
+        <div class="flex items-center justify-between">
+            <h1 class="text-xl font-semibold text-primary">Insights</h1>
+            <button id="exportBtn" class="text-primary font-medium text-sm px-4 py-2 border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors">
+                Export
+            </button>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="px-4 py-6">
+        <!-- Educational Carousel -->
+        <div class="educational-carousel mb-6">
+            <div class="splide" id="educational-carousel">
+                <div class="splide__track">
+                    <ul class="splide__list">
+                        <li class="splide__slide">
+                            <div class="educational-slide">
+                                <h3>Start Low, Go Slow</h3>
+                                <p>Always begin with lower doses, especially with new substances or batches. You can always take more, but you can't take less. This fundamental harm reduction principle helps prevent overdose and adverse reactions.</p>
+                            </div>
+                        </li>
+                        <li class="splide__slide">
+                            <div class="educational-slide">
+                                <h3>Set and Setting</h3>
+                                <p>Your environment and mental state greatly impact your experience. Choose safe, comfortable settings with trusted people. Avoid using when stressed, anxious, or in unfamiliar places.</p>
+                            </div>
+                        </li>
+                        <li class="splide__slide">
+                            <div class="educational-slide">
+                                <h3>Test Before You Use</h3>
+                                <p>Substance testing kits can identify dangerous adulterants like fentanyl. DanceSafe, Bunk Police, and other organizations provide testing services and kits. When in doubt, don't use.</p>
+                            </div>
+                        </li>
+                        <li class="splide__slide">
+                            <div class="educational-slide">
+                                <h3>Have a Plan</h3>
+                                <p>Know your dose, have water available, and ensure someone knows your plans. Have emergency contacts ready and know the signs of overdose. Never use alone when possible.</p>
+                            </div>
+                        </li>
+                        <li class="splide__slide">
+                            <div class="educational-slide">
+                                <h3>Naloxone Saves Lives</h3>
+                                <p>If you or anyone you know uses opioids, carry naloxone (Narcan). It's safe, easy to use, and can reverse opioid overdoses. Many pharmacies provide it without prescription.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Time Filter -->
+        <div class="flex gap-2 mb-6 overflow-x-auto">
+            <button class="filter-tab active px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap" data-filter="7">7 Days</button>
+            <button class="filter-tab px-4 py-2 rounded-full text-sm font-medium bg-white border border-gray-300 whitespace-nowrap" data-filter="30">30 Days</button>
+            <button class="filter-tab px-4 py-2 rounded-full text-sm font-medium bg-white border border-gray-300 whitespace-nowrap" data-filter="90">3 Months</button>
+            <button class="filter-tab px-4 py-2 rounded-full text-sm font-medium bg-white border border-gray-300 whitespace-nowrap" data-filter="365">1 Year</button>
+        </div>
+        
+        <!-- Safety Alerts -->
+        <div id="safetyAlerts" class="mb-6">
+            <!-- Safety alerts will be populated by JavaScript -->
+        </div>
+        
+        <!-- Advanced Statistics -->
+        <div class="advanced-stats mb-6">
+            <div class="advanced-stat-card">
+                <div class="value" id="totalEntries">0</div>
+                <div class="label">Total Entries</div>
+            </div>
+            <div class="advanced-stat-card">
+                <div class="value" id="avgEffectiveness">0.0</div>
+                <div class="label">Avg Effectiveness</div>
+            </div>
+            <div class="advanced-stat-card">
+                <div class="value" id="totalSubstances">0</div>
+                <div class="label">Substances Tried</div>
+            </div>
+            <div class="advanced-stat-card">
+                <div class="value" id="safetyScore">100%</div>
+                <div class="label">Safety Score</div>
+            </div>
+        </div>
+        
+        <!-- Usage Calendar -->
+        <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+            <h3 class="font-semibold text-primary mb-4">Usage Calendar</h3>
+            <div id="calendar" class="grid grid-cols-7 gap-1 text-center">
+                <!-- Calendar will be populated by JavaScript -->
+            </div>
+            <div class="flex items-center justify-between mt-4 text-xs text-gray-600">
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 bg-accent rounded-full"></div>
+                    <span>Substance use</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 border-2 border-secondary rounded-full"></div>
+                    <span>Today</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Effectiveness Trends -->
+        <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+            <h3 class="font-semibold text-primary mb-4">Effectiveness Trends</h3>
+            <div id="effectivenessChart" class="chart-container"></div>
+        </div>
+        
+        <!-- Substance Preferences -->
+        <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+            <h3 class="font-semibold text-primary mb-4">Substance Preferences</h3>
+            <div id="preferencesChart" class="chart-container"></div>
+        </div>
+        
+        <!-- Mood Tracking Visualization -->
+        <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+            <h3 class="font-semibold text-primary mb-4">Mood Patterns</h3>
+            <div id="moodChart" class="chart-container"></div>
+        </div>
+        
+        <!-- Usage Patterns -->
+        <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+            <h3 class="font-semibold text-primary mb-4">Usage Patterns</h3>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-primary mb-1" id="frequencyScore">0</div>
+                    <div class="text-sm text-gray-600">Days between use</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-accent mb-1" id="consistencyScore">0%</div>
+                    <div class="text-sm text-gray-600">Consistency</div>
+                </div>
+            </div>
+            <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-700" id="patternAnalysis">Loading pattern analysis...</p>
+            </div>
+        </div>
+        
+        <!-- Top Experiences -->
+        <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+            <h3 class="font-semibold text-primary mb-4">Best Experiences</h3>
+            <div id="topExperiences" class="space-y-3">
+                <!-- Top experiences will be populated by JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Side Effects Analysis -->
+        <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+            <h3 class="font-semibold text-primary mb-4">Side Effects Analysis</h3>
+            <div id="sideEffectsChart" class="chart-container"></div>
+        </div>
+        
+        <!-- Harm Reduction Tips -->
+        <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+            <h3 class="font-semibold text-primary mb-4">Personalized Tips</h3>
+            <div id="harmReductionTips" class="space-y-3">
+                <!-- Tips will be populated by JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Data Export Options -->
+        <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+            <h3 class="font-semibold text-primary mb-4">Data Export</h3>
+            <p class="text-sm text-gray-600 mb-3">Export your data for healthcare providers or personal backup</p>
+            <div class="export-options">
+                <button class="export-btn" onclick="exportData('json')">JSON Export</button>
+                <button class="export-btn" onclick="exportData('csv')">CSV Export</button>
+                <button class="export-btn secondary" onclick="exportData('pdf')">PDF Report</button>
+                <button class="export-btn secondary" onclick="shareData()">Share Summary</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-50">
+        <div class="flex justify-around">
+            <a href="index.html" class="nav-tab flex flex-col items-center py-2 text-gray-500">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+                </svg>
+                <span class="text-xs mt-1">Log</span>
+            </a>
+            <a href="evaluation.html" class="nav-tab flex flex-col items-center py-2 text-gray-500">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <span class="text-xs mt-1">Evaluate</span>
+            </a>
+            <a href="insights.html" class="nav-tab active flex flex-col items-center py-2">
+                <svg class="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
+                </svg>
+                <span class="text-xs mt-1 text-primary">Insights</span>
+            </a>
+        </div>
+    </nav>
+    
+    <!-- Scripts -->
+    <script src="main.js"></script>
+    <script src="interaction-checker.js"></script>
+    <script src="emergency-system.js"></script>
+    <script>
+        let currentFilter = 7;
+        let effectivenessChart = null;
+        let preferencesChart = null;
+        let moodChart = null;
+        let sideEffectsChart = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            loadInsights();
+            initializeFilters();
+            initializeEducationalCarousel();
+            
+            // Initialize export functionality
+            document.getElementById('exportBtn').addEventListener('click', function() {
+                const exportSection = document.querySelector('.export-options').parentElement;
+                exportSection.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+        
+        function initializeEducationalCarousel() {
+            new Splide('#educational-carousel', {
+                type: 'loop',
+                autoplay: true,
+                interval: 8000,
+                arrows: true,
+                pagination: true,
+                pauseOnHover: true,
+                pauseOnFocus: true,
+            }).mount();
+        }
+        
+        function initializeFilters() {
+            const filterTabs = document.querySelectorAll('.filter-tab');
+            filterTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Update active state
+                    filterTabs.forEach(t => {
+                        t.classList.remove('active');
+                        t.classList.add('bg-white', 'border', 'border-gray-300');
+                    });
+                    this.classList.add('active');
+                    this.classList.remove('bg-white', 'border', 'border-gray-300');
+                    
+                    // Update filter and reload insights
+                    currentFilter = parseInt(this.dataset.filter);
+                    loadInsights();
+                });
+            });
+        }
+        
+        function loadInsights() {
+            const entries = getEntriesInDateRange(currentFilter);
+            const evaluations = getEvaluationsInDateRange(currentFilter);
+            
+            updateStatistics(entries, evaluations);
+            updateCalendar(entries);
+            updateCharts(entries, evaluations);
+            updateTopExperiences(evaluations);
+            updateHarmReductionTips(entries, evaluations);
+            updatePatternAnalysis(entries);
+            checkSafetyAlerts(entries, evaluations);
+        }
+        
+        function updateStatistics(entries, evaluations) {
+            // Total entries
+            document.getElementById('totalEntries').textContent = entries.length;
+            
+            // Average effectiveness
+            const avgEffectiveness = evaluations.length > 0 
+                ? (evaluations.reduce((sum, e) => sum + e.effectiveness, 0) / evaluations.length).toFixed(1)
+                : 0;
+            document.getElementById('avgEffectiveness').textContent = avgEffectiveness;
+            
+            // Total unique substances
+            const uniqueSubstances = [...new Set(entries.map(e => e.category))].length;
+            document.getElementById('totalSubstances').textContent = uniqueSubstances;
+            
+            // Safety score (based on frequency and patterns)
+            const safetyScore = calculateSafetyScore(entries);
+            document.getElementById('safetyScore').textContent = safetyScore + '%';
+            
+            // Trends (compare with previous period)
+            const previousEntries = getEntriesInDateRange(currentFilter * 2).filter(e => {
+                const cutoff = new Date();
+                cutoff.setDate(cutoff.getDate() - currentFilter);
+                return new Date(e.timestamp) < cutoff;
+            });
+            
+            const trend = entries.length > previousEntries.length ? '↑' : entries.length < previousEntries.length ? '↓' : '→';
+            document.getElementById('entriesTrend').textContent = trend + ' vs previous period';
+        }
+        
+        function calculateSafetyScore(entries) {
+            if (entries.length === 0) return 100;
+            
+            let score = 100;
+            
+            // Check frequency (lose points for high frequency)
+            const avgDaysBetween = calculateAverageDaysBetween(entries);
+            if (avgDaysBetween < 3) score -= 30;
+            else if (avgDaysBetween < 7) score -= 10;
+            
+            // Check for multiple substances in one day
+            const entriesByDay = {};
+            entries.forEach(entry => {
+                const day = new Date(entry.timestamp).toDateString();
+                entriesByDay[day] = (entriesByDay[day] || 0) + 1;
+            });
+            
+            const multiUseDays = Object.values(entriesByDay).filter(count => count > 1).length;
+            score -= multiUseDays * 10;
+            
+            return Math.max(0, score);
+        }
+        
+        function updateCalendar(entries) {
+            const calendar = document.getElementById('calendar');
+            const today = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+            
+            // Generate calendar days
+            let calendarHTML = '';
+            for (let i = 0; i < 30; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                
+                const hasEntry = entries.some(entry => {
+                    const entryDate = new Date(entry.timestamp);
+                    return entryDate.toDateString() === date.toDateString();
+                });
+                
+                const isToday = date.toDateString() === today.toDateString();
+                
+                let classes = 'calendar-day text-xs';
+                if (hasEntry) classes += ' has-entry';
+                if (isToday) classes += ' today';
+                
+                calendarHTML += `<div class="${classes}">${date.getDate()}</div>`;
+            }
+            
+            calendar.innerHTML = calendarHTML;
+        }
+        
+        function initializeCharts() {
+            // Effectiveness trends chart
+            const effectivenessEl = document.getElementById('effectivenessChart');
+            effectivenessChart = echarts.init(effectivenessEl);
+            
+            // Preferences chart
+            const preferencesEl = document.getElementById('preferencesChart');
+            preferencesChart = echarts.init(preferencesEl);
+            
+            // Mood chart
+            const moodEl = document.getElementById('moodChart');
+            moodChart = echarts.init(moodEl);
+            
+            // Side effects chart
+            const sideEffectsEl = document.getElementById('sideEffectsChart');
+            sideEffectsChart = echarts.init(sideEffectsEl);
+        }
+        
+        function updateCharts(entries, evaluations) {
+            updateEffectivenessChart(evaluations);
+            updatePreferencesChart(entries);
+            updateMoodChart(evaluations);
+            updateSideEffectsChart(evaluations);
+        }
+        
+        function updateEffectivenessChart(evaluations) {
+            const data = evaluations.map(e => ({
+                date: new Date(e.timestamp).toLocaleDateString(),
+                effectiveness: e.effectiveness
+            }));
+            
+            const option = {
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: '{b}: {c}/10'
+                },
+                xAxis: {
+                    type: 'category',
+                    data: data.map(d => d.date),
+                    axisLabel: {
+                        fontSize: 10
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 0,
+                    max: 10,
+                    axisLabel: {
+                        fontSize: 10
+                    }
+                },
+                series: [{
+                    data: data.map(d => d.effectiveness),
+                    type: 'line',
+                    smooth: true,
+                    lineStyle: {
+                        color: '#1E4D4B',
+                        width: 3
+                    },
+                    itemStyle: {
+                        color: '#1E4D4B'
+                    },
+                    areaStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0,
+                            y: 0,
+                            x2: 0,
+                            y2: 1,
+                            colorStops: [{
+                                offset: 0, color: 'rgba(30, 77, 75, 0.3)'
+                            }, {
+                                offset: 1, color: 'rgba(30, 77, 75, 0.05)'
+                            }]
+                        }
+                    }
+                }],
+                grid: {
+                    left: '10%',
+                    right: '10%',
+                    top: '10%',
+                    bottom: '20%'
+                }
+            };
+            
+            effectivenessChart.setOption(option);
+        }
+        
+        function updatePreferencesChart(entries) {
+            const categoryCounts = {};
+            entries.forEach(entry => {
+                categoryCounts[entry.category] = (categoryCounts[entry.category] || 0) + 1;
+            });
+            
+            const data = Object.entries(categoryCounts).map(([category, count]) => ({
+                name: category.charAt(0).toUpperCase() + category.slice(1),
+                value: count
+            }));
+            
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{a} <br/>{b}: {c} ({d}%)'
+                },
+                series: [{
+                    name: 'Substances',
+                    type: 'pie',
+                    radius: '70%',
+                    data: data,
+                    itemStyle: {
+                        borderRadius: 4,
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    },
+                    label: {
+                        fontSize: 10
+                    },
+                    color: ['#1E4D4B', '#81B366', '#E07A5F', '#F2CC8F']
+                }]
+            };
+            
+            preferencesChart.setOption(option);
+        }
+        
+        function updateMoodChart(evaluations) {
+            if (evaluations.length === 0) {
+                const option = {
+                    title: {
+                        text: 'No mood data available',
+                        left: 'center',
+                        top: 'middle',
+                        textStyle: {
+                            color: '#9CA3AF',
+                            fontSize: 14
+                        }
+                    }
+                };
+                moodChart.setOption(option);
+                return;
+            }
+            
+            const moodData = evaluations.map(e => [
+                new Date(e.timestamp).toLocaleDateString(),
+                e.moodBefore || 3,
+                e.moodDuring || 3,
+                e.moodAfter || 3
+            ]);
+            
+            const option = {
+                tooltip: {
+                    trigger: 'axis'
+                },
+                legend: {
+                    data: ['Before', 'During', 'After'],
+                    bottom: 0,
+                    textStyle: {
+                        fontSize: 10
+                    }
+                },
+                xAxis: {
+                    type: 'category',
+                    data: moodData.map(d => d[0]),
+                    axisLabel: {
+                        fontSize: 10
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 1,
+                    max: 5,
+                    axisLabel: {
+                        fontSize: 10,
+                        formatter: function(value) {
+                            const moods = ['', '😢', '😐', '🙂', '😊', '😄'];
+                            return moods[value] || '';
+                        }
+                    }
+                },
+                series: [
+                    {
+                        name: 'Before',
+                        type: 'line',
+                        data: moodData.map(d => d[1]),
+                        lineStyle: { color: '#E07A5F' },
+                        itemStyle: { color: '#E07A5F' }
+                    },
+                    {
+                        name: 'During',
+                        type: 'line',
+                        data: moodData.map(d => d[2]),
+                        lineStyle: { color: '#81B366' },
+                        itemStyle: { color: '#81B366' }
+                    },
+                    {
+                        name: 'After',
+                        type: 'line',
+                        data: moodData.map(d => d[3]),
+                        lineStyle: { color: '#1E4D4B' },
+                        itemStyle: { color: '#1E4D4B' }
+                    }
+                ],
+                grid: {
+                    left: '10%',
+                    right: '10%',
+                    top: '10%',
+                    bottom: '20%'
+                }
+            };
+            
+            moodChart.setOption(option);
+        }
+        
+        function updateSideEffectsChart(evaluations) {
+            if (evaluations.length === 0) {
+                const option = {
+                    title: {
+                        text: 'No side effect data available',
+                        left: 'center',
+                        top: 'middle',
+                        textStyle: {
+                            color: '#9CA3AF',
+                            fontSize: 14
+                        }
+                    }
+                };
+                sideEffectsChart.setOption(option);
+                return;
+            }
+            
+            const sideEffectCounts = {};
+            evaluations.forEach(evaluation => {
+                evaluation.sideEffects.forEach(effect => {
+                    sideEffectCounts[effect] = (sideEffectCounts[effect] || 0) + 1;
+                });
+            });
+            
+            const data = Object.entries(sideEffectCounts)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 8)
+                .map(([effect, count]) => ({
+                    name: effect.charAt(0).toUpperCase() + effect.slice(1),
+                    value: count
+                }));
+            
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}: {c} occurrences'
+                },
+                series: [{
+                    type: 'bar',
+                    data: data.map(d => d.value),
+                    itemStyle: {
+                        color: '#E07A5F'
+                    }
+                }],
+                xAxis: {
+                    type: 'category',
+                    data: data.map(d => d.name),
+                    axisLabel: {
+                        fontSize: 10,
+                        rotate: 45
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        fontSize: 10
+                    }
+                },
+                grid: {
+                    left: '10%',
+                    right: '10%',
+                    top: '10%',
+                    bottom: '30%'
+                }
+            };
+            
+            sideEffectsChart.setOption(option);
+        }
+        
+        function updateTopExperiences(evaluations) {
+            const topExperiences = evaluations
+                .filter(e => e.effectiveness >= 8)
+                .sort((a, b) => b.effectiveness - a.effectiveness)
+                .slice(0, 3);
+            
+            const container = document.getElementById('topExperiences');
+            
+            if (topExperiences.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No high-rated experiences yet</p>';
+                return;
+            }
+            
+            container.innerHTML = topExperiences.map(evaluation => {
+                const entry = getEntryById(evaluation.entryId);
+                if (!entry) return '';
+                
+                return `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="text-2xl">${getCategoryEmoji(entry.category)}</div>
+                            <div>
+                                <div class="font-medium text-sm">${entry.category}</div>
+                                <div class="text-xs text-gray-600">${entry.dosage}${entry.unit} • ${entry.method}</div>
+                                <div class="text-xs text-gray-400">${formatTime(entry.timestamp)}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-accent">${evaluation.effectiveness}/10</div>
+                            <div class="text-xs text-gray-500">Effectiveness</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function updateHarmReductionTips(entries, evaluations) {
+            const tips = generateHarmReductionTips(entries, evaluations);
+            const container = document.getElementById('harmReductionTips');
+            
+            container.innerHTML = tips.map(tip => `
+                <div class="insight-card bg-gray-50 rounded-lg p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                            <svg class="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-sm mb-1">${tip.title}</h4>
+                            <p class="text-xs text-gray-600">${tip.content}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function updatePatternAnalysis(entries) {
+            if (entries.length < 2) {
+                document.getElementById('patternAnalysis').textContent = 'Need more data to analyze patterns';
+                document.getElementById('frequencyScore').textContent = 'N/A';
+                document.getElementById('consistencyScore').textContent = 'N/A';
+                return;
+            }
+            
+            // Calculate frequency (average days between use)
+            const sortedEntries = entries.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            const intervals = [];
+            for (let i = 1; i < sortedEntries.length; i++) {
+                const prev = new Date(sortedEntries[i-1].timestamp);
+                const curr = new Date(sortedEntries[i].timestamp);
+                const days = Math.floor((curr - prev) / (1000 * 60 * 60 * 24));
+                intervals.push(days);
+            }
+            
+            const avgFrequency = Math.round(intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length);
+            document.getElementById('frequencyScore').textContent = avgFrequency;
+            
+            // Calculate consistency (lower variance = higher consistency)
+            const mean = intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length;
+            const variance = intervals.reduce((sum, interval) => sum + Math.pow(interval - mean, 2), 0) / intervals.length;
+            const consistency = Math.max(0, Math.round((1 - Math.sqrt(variance) / mean) * 100));
+            document.getElementById('consistencyScore').textContent = consistency + '%';
+            
+            // Generate analysis text
+            let analysis = '';
+            if (avgFrequency <= 3) {
+                analysis = 'Frequent use detected. Consider spacing out sessions for better harm reduction.';
+            } else if (avgFrequency <= 7) {
+                analysis = 'Moderate usage frequency. Good balance for harm reduction.';
+            } else {
+                analysis = 'Infrequent use pattern. Excellent spacing for safety.';
+            }
+            
+            if (consistency > 80) {
+                analysis += ' Your usage timing is very consistent.';
+            } else if (consistency > 60) {
+                analysis += ' Consider more consistent timing for better planning.';
+            } else {
+                analysis += ' Irregular timing - consider planning ahead for safety.';
+            }
+            
+            document.getElementById('patternAnalysis').textContent = analysis;
+        }
+        
+        function checkSafetyAlerts(entries, evaluations) {
+            const alerts = [];
+            
+            // Check for frequent use
+            const recentEntries = entries.filter(e => {
+                const daysSince = (new Date() - new Date(e.timestamp)) / (1000 * 60 * 60 * 24);
+                return daysSince <= 7;
+            });
+            
+            if (recentEntries.length >= 5) {
+                alerts.push({
+                    type: 'frequency',
+                    title: 'High Usage Frequency',
+                    message: 'You\'ve logged 5+ substances in the past week. Consider spacing out use for better harm reduction.'
+                });
+            }
+            
+            // Check for low effectiveness trend
+            const recentEvaluations = evaluations.filter(e => {
+                const daysSince = (new Date() - new Date(e.timestamp)) / (1000 * 60 * 60 * 24);
+                return daysSince <= 14;
+            });
+            
+            if (recentEvaluations.length >= 3) {
+                const avgEffectiveness = recentEvaluations.reduce((sum, e) => sum + e.effectiveness, 0) / recentEvaluations.length;
+                if (avgEffectiveness < 5) {
+                    alerts.push({
+                        type: 'effectiveness',
+                        title: 'Low Effectiveness Trend',
+                        message: 'Recent experiences have been rated below average. Consider tolerance breaks or dosage adjustments.'
+                    });
+                }
+            }
+            
+            // Display alerts
+            const container = document.getElementById('safetyAlerts');
+            if (alerts.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            container.innerHTML = alerts.map(alert => `
+                <div class="alert-card rounded-lg p-4 mb-4">
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 bg-warning rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-sm mb-1">${alert.title}</h4>
+                            <p class="text-xs text-gray-700">${alert.message}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function exportData(format) {
+            const entries = getAllEntries();
+            const evaluations = getAllEvaluations();
+            
+            switch(format) {
+                case 'json':
+                    exportJSON(entries, evaluations);
+                    break;
+                case 'csv':
+                    exportCSV(entries, evaluations);
+                    break;
+                case 'pdf':
+                    alert('PDF export feature coming soon!');
+                    break;
+                default:
+                    alert('Export format not supported');
+            }
+        }
+        
+        function exportJSON(entries, evaluations) {
+            const data = {
+                entries: entries,
+                evaluations: evaluations,
+                exportDate: new Date().toISOString(),
+                version: '1.0.0'
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            downloadFile(blob, `picker-data-${new Date().toISOString().split('T')[0]}.json`);
+        }
+        
+        function exportCSV(entries, evaluations) {
+            let csv = 'Date,Category,Dosage,Unit,Method,Effectiveness,Mood Before,Mood During,Mood After,Side Effects,Notes\n';
+            
+            entries.forEach(entry => {
+                const evaluation = evaluations.find(e => e.entryId === entry.id);
+                const row = [
+                    new Date(entry.timestamp).toLocaleDateString(),
+                    entry.category,
+                    entry.dosage,
+                    entry.unit,
+                    entry.method,
+                    evaluation ? evaluation.effectiveness : '',
+                    evaluation ? evaluation.moodBefore : '',
+                    evaluation ? evaluation.moodDuring : '',
+                    evaluation ? evaluation.moodAfter : '',
+                    evaluation ? evaluation.sideEffects.join('; ') : '',
+                    entry.notes || ''
+                ];
+                csv += row.map(field => `"${field}"`).join(',') + '\n';
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            downloadFile(blob, `picker-data-${new Date().toISOString().split('T')[0]}.csv`);
+        }
+        
+        function downloadFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        function shareData() {
+            const entries = getAllEntries();
+            const evaluations = getAllEvaluations();
+            
+            const summary = `Picker App Summary:
+Total Entries: ${entries.length}
+Average Effectiveness: ${evaluations.length > 0 ? (evaluations.reduce((sum, e) => sum + e.effectiveness, 0) / evaluations.length).toFixed(1) : 'N/A'}
+Substances Tried: ${[...new Set(entries.map(e => e.category))].length}
+Data collected over ${Math.max(1, Math.ceil((new Date() - new Date(entries[entries.length - 1]?.timestamp || new Date())) / (1000 * 60 * 60 * 24)))} days`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Picker App Data Summary',
+                    text: summary
+                });
+            } else {
+                alert(summary);
+            }
+        }
+        
+        // Helper functions
+        function getEntriesInDateRange(days) {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - days);
+            return getAllEntries().filter(entry => new Date(entry.timestamp) >= cutoff);
+        }
+        
+        function getEvaluationsInDateRange(days) {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - days);
+            return getAllEvaluations().filter(evaluation => new Date(evaluation.timestamp) >= cutoff);
+        }
+        
+        function calculateAverageDaysBetween(entries) {
+            if (entries.length < 2) return 999;
+            
+            const sortedEntries = entries.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            const intervals = [];
+            for (let i = 1; i < sortedEntries.length; i++) {
+                const prev = new Date(sortedEntries[i-1].timestamp);
+                const curr = new Date(sortedEntries[i].timestamp);
+                const days = Math.floor((curr - prev) / (1000 * 60 * 60 * 24));
+                intervals.push(days);
+            }
+            
+            return intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length;
+        }
+        
+        function generateHarmReductionTips(entries, evaluations) {
+            const tips = [];
+            
+            // Analyze usage patterns
+            const recentEntries = entries.filter(entry => {
+                const daysSince = (new Date() - new Date(entry.timestamp)) / (1000 * 60 * 60 * 24);
+                return daysSince <= 30;
+            });
+            
+            // Category-specific tips
+            const categoryCounts = {};
+            recentEntries.forEach(entry => {
+                categoryCounts[entry.category] = (categoryCounts[entry.category] || 0) + 1;
+            });
+            
+            const mostUsedCategory = Object.entries(categoryCounts)
+                .sort(([,a], [,b]) => b - a)[0];
+            
+            if (mostUsedCategory) {
+                tips.push({
+                    title: `${mostUsedCategory[0]} Usage Pattern`,
+                    content: `You've used ${mostUsedCategory[0]} ${mostUsedCategory[1]} times recently. Consider tracking batch consistency and tolerance levels.`
+                });
+            }
+            
+            // Effectiveness-based tips
+            if (evaluations.length > 0) {
+                const recentEvaluations = evaluations.filter(e => {
+                    const daysSince = (new Date() - new Date(e.timestamp)) / (1000 * 60 * 60 * 24);
+                    return daysSince <= 14;
+                });
+                
+                if (recentEvaluations.length >= 3) {
+                    const avgEffectiveness = recentEvaluations.reduce((sum, e) => sum + e.effectiveness, 0) / recentEvaluations.length;
+                    
+                    if (avgEffectiveness < 5) {
+                        tips.push({
+                            title: 'Effectiveness Optimization',
+                            content: 'Recent experiences rated below 5/10. Consider tolerance breaks or dosage adjustments for better harm reduction.'
+                        });
+                    }
+                }
+            }
+            
+            // Default safety tips
+            if (tips.length === 0) {
+                tips.push(
+                    {
+                        title: 'Start Low, Go Slow',
+                        content: 'Always begin with lower doses, especially with new substances or batches. You can take more, but you can\'t take less.'
+                    },
+                    {
+                        title: 'Set and Setting',
+                        content: 'Your environment and mental state greatly impact your experience. Choose safe, comfortable settings.'
+                    }
+                );
+            }
+            
+            return tips;
+        }
+        
+        function getCategoryEmoji(category) {
+            const emojis = {
+                'cannabis': '🌿',
+                'psychedelics': '🍄',
+                'dissociatives': '💫',
+                'stimulants': '⚡'
+            };
+            return emojis[category] || '💊';
+        }
+        
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            
+            if (diffHours < 1) return 'Just now';
+            if (diffHours < 24) return `${diffHours}h ago`;
+            return date.toLocaleDateString();
+        }
+    </script>
+</body>
+</html>

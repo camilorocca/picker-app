@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Picker - Harm Reduction Substance Tracker</title>
+    <meta name="description" content="Track and evaluate psychotropic substance use with harm reduction principles">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1E4D4B">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Picker">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Core Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#1E4D4B',
+                        'secondary': '#E07A5F',
+                        'accent': '#81B366',
+                        'neutral': '#F4F3F1',
+                        'warning': '#F2CC8F',
+                        'text': '#2C3E50'
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        .hero-bg {
+            background: linear-gradient(135deg, #1E4D4B 0%, #81B366 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('resources/hero-wellness.png') center/cover;
+            opacity: 0.3;
+            z-index: 1;
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .safety-zone {
+            background: linear-gradient(90deg, #81B366 0%, #F2CC8F 70%, #E07A5F 100%);
+            height: 8px;
+            border-radius: 4px;
+            position: relative;
+        }
+        
+        .dosage-marker {
+            position: absolute;
+            top: -4px;
+            width: 4px;
+            height: 16px;
+            background: #2C3E50;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+        
+        .floating-particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(129, 179, 102, 0.3);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.3; }
+            50% { transform: translateY(-20px) rotate(180deg); opacity: 0.8; }
+        }
+        
+        .substance-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .substance-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(30, 77, 75, 0.15);
+        }
+        
+        .nav-tab {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 3px;
+            background: #E07A5F;
+            border-radius: 2px;
+        }
+        
+        .breathing {
+            animation: breathe 4s ease-in-out infinite;
+        }
+        
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .interaction-warning {
+            background: linear-gradient(135deg, #F2CC8F 0%, #E07A5F 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .emergency-fab {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: #E07A5F;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(224, 122, 95, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .emergency-fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(224, 122, 95, 0.6);
+        }
+        
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #2C3E50;
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .quick-tips {
+            background: linear-gradient(135deg, #81B366 0%, #1E4D4B 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+        }
+        
+        .quick-tips h4 {
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .quick-tips ul {
+            margin: 0;
+            padding-left: 1.25rem;
+            font-size: 0.9rem;
+        }
+        
+        .quick-tips li {
+            margin-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body class="bg-neutral text-text font-sans">
+    <!-- Emergency FAB -->
+    <div class="emergency-fab" onclick="emergencySystem.showEmergencyModal()" title="Emergency Resources">
+        🚨
+    </div>
+    
+    <!-- Hero Section -->
+    <div class="hero-bg min-h-screen relative">
+        <div class="floating-particles">
+            <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
+            <div class="particle" style="left: 20%; animation-delay: 1s;"></div>
+            <div class="particle" style="left: 30%; animation-delay: 2s;"></div>
+            <div class="particle" style="left: 40%; animation-delay: 3s;"></div>
+            <div class="particle" style="left: 50%; animation-delay: 4s;"></div>
+            <div class="particle" style="left: 60%; animation-delay: 5s;"></div>
+            <div class="particle" style="left: 70%; animation-delay: 1.5s;"></div>
+            <div class="particle" style="left: 80%; animation-delay: 2.5s;"></div>
+            <div class="particle" style="left: 90%; animation-delay: 3.5s;"></div>
+        </div>
+        
+        <div class="hero-content px-4 pt-8 pb-24">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="breathing inline-block mb-4">
+                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg">
+                        <svg class="w-8 h-8 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                    </div>
+                </div>
+                <h1 class="text-3xl font-bold text-white mb-2">Picker</h1>
+                <p class="text-white/90 text-sm">Harm Reduction Substance Tracker</p>
+            </div>
+            
+            <!-- Quick Tips -->
+            <div class="quick-tips mx-4 mb-6">
+                <h4>🛡️ Today's Safety Reminder</h4>
+                <ul>
+                    <li>Start with lower doses, especially with new substances</li>
+                    <li>Test your substances when possible</li>
+                    <li>Use in safe environments with trusted people</li>
+                    <li>Have naloxone available if using opioids</li>
+                </ul>
+            </div>
+            
+            <!-- Interaction Warning (Hidden by default) -->
+            <div id="interactionWarning" class="interaction-warning mx-4 mb-6 hidden">
+                <div class="flex items-start gap-3">
+                    <div class="text-2xl">⚠️</div>
+                    <div>
+                        <h4 class="font-semibold mb-1">Interaction Warning</h4>
+                        <p id="interactionMessage" class="text-sm opacity-90"></p>
+                        <button onclick="showInteractionDetails()" class="mt-2 text-white underline text-sm">
+                            Learn More
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Log Interface -->
+            <div class="glass-card rounded-2xl p-6 mb-6 mx-4">
+                <h2 class="text-xl font-semibold text-primary mb-4">Log Substance Use</h2>
+                
+                <!-- Substance Category Selector -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-text mb-2">Substance Category</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="substance-card bg-white rounded-lg p-3 border-2 border-transparent" data-category="cannabis">
+                            <div class="text-center">
+                                <div class="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                                    🌿
+                                </div>
+                                <span class="text-xs font-medium">Cannabis</span>
+                            </div>
+                        </div>
+                        <div class="substance-card bg-white rounded-lg p-3 border-2 border-transparent" data-category="psychedelics">
+                            <div class="text-center">
+                                <div class="w-8 h-8 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                                    🍄
+                                </div>
+                                <span class="text-xs font-medium">Psychedelics</span>
+                            </div>
+                        </div>
+                        <div class="substance-card bg-white rounded-lg p-3 border-2 border-transparent" data-category="dissociatives">
+                            <div class="text-center">
+                                <div class="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                                    💫
+                                </div>
+                                <span class="text-xs font-medium">Dissociatives</span>
+                            </div>
+                        </div>
+                        <div class="substance-card bg-white rounded-lg p-3 border-2 border-transparent" data-category="stimulants">
+                            <div class="text-center">
+                                <div class="w-8 h-8 bg-warning/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                                    ⚡
+                                </div>
+                                <span class="text-xs font-medium">Stimulants</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dosage Input -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-text mb-2">
+                        Dosage
+                        <span class="tooltip ml-1">
+                            ℹ️
+                            <span class="tooltiptext">Start with lower doses, especially with new substances or batches</span>
+                        </span>
+                    </label>
+                    <div class="flex gap-3">
+                        <input type="number" id="dosage" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Amount" step="0.1">
+                        <select id="unit" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="mg">mg</option>
+                            <option value="g">g</option>
+                            <option value="ml">ml</option>
+                            <option value="tabs">tabs</option>
+                            <option value="hits">hits</option>
+                        </select>
+                    </div>
+                    <div class="mt-2">
+                        <div class="safety-zone">
+                            <div class="dosage-marker" style="left: 25%;"></div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>Light</span>
+                            <span>Common</span>
+                            <span>Strong</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Method of Consumption -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-text mb-2">Method</label>
+                    <select id="method" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="">Select method</option>
+                        <option value="oral">Oral</option>
+                        <option value="inhalation">Inhalation</option>
+                        <option value="insufflation">Insufflation</option>
+                        <option value="sublingual">Sublingual</option>
+                        <option value="topical">Topical</option>
+                    </select>
+                </div>
+                
+                <!-- Time -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-text mb-2">Time Taken</label>
+                    <input type="datetime-local" id="timestamp" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+                
+                <!-- Notes -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-text mb-2">Quick Notes (Optional)</label>
+                    <textarea id="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Batch, source, or immediate observations"></textarea>
+                </div>
+                
+                <!-- Log Button -->
+                <button id="logBtn" class="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
+                    Log Substance Use
+                </button>
+            </div>
+            
+            <!-- Safety Information -->
+            <div class="glass-card rounded-2xl p-4 mx-4 mb-6">
+                <div class="flex items-start gap-3">
+                    <div class="w-6 h-6 bg-warning rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-medium text-text mb-1">Harm Reduction Reminder</h3>
+                        <p class="text-sm text-gray-600">Start with lower doses, especially with new substances or batches. Always test new supplies and avoid mixing substances.</p>
+                        <button onclick="showHarmReductionTips()" class="text-primary text-sm font-medium mt-2">
+                            View More Tips →
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Entries -->
+            <div class="glass-card rounded-2xl p-4 mx-4">
+                <h3 class="font-semibold text-primary mb-3">Recent Entries</h3>
+                <div id="recentEntries" class="space-y-3">
+                    <!-- Recent entries will be populated by JavaScript -->
+                </div>
+                <button class="w-full mt-4 text-primary text-sm font-medium py-2 border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors">
+                    View All Entries
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-50">
+        <div class="flex justify-around">
+            <a href="index.html" class="nav-tab active flex flex-col items-center py-2">
+                <svg class="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+                </svg>
+                <span class="text-xs mt-1 text-primary">Log</span>
+            </a>
+            <a href="evaluation.html" class="nav-tab flex flex-col items-center py-2 text-gray-500">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <span class="text-xs mt-1">Evaluate</span>
+            </a>
+            <a href="insights.html" class="nav-tab flex flex-col items-center py-2 text-gray-500">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
+                </svg>
+                <span class="text-xs mt-1">Insights</span>
+            </a>
+        </div>
+    </nav>
+    
+    <!-- Scripts -->
+    <script src="main.js"></script>
+    <script src="interaction-checker.js"></script>
+    <script src="emergency-system.js"></script>
+    <script>
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set current time as default
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('timestamp').value = now.toISOString().slice(0, 16);
+            
+            // Load recent entries
+            loadRecentEntries();
+            
+            // Initialize substance selector
+            initSubstanceSelector();
+            
+            // Initialize dosage slider
+            initDosageSlider();
+            
+            // Check for recent interactions
+            checkRecentInteractions();
+        });
+        
+        function initSubstanceSelector() {
+            const cards = document.querySelectorAll('.substance-card');
+            cards.forEach(card => {
+                card.addEventListener('click', function() {
+                    // Remove active state from all cards
+                    cards.forEach(c => c.classList.remove('border-primary', 'bg-primary/5'));
+                    // Add active state to clicked card
+                    this.classList.add('border-primary', 'bg-primary/5');
+                    
+                    // Check for interactions
+                    const category = this.dataset.category;
+                    checkInteractions(category);
+                });
+            });
+        }
+        
+        function initDosageSlider() {
+            const dosageInput = document.getElementById('dosage');
+            const marker = document.querySelector('.dosage-marker');
+            
+            dosageInput.addEventListener('input', function() {
+                const value = parseFloat(this.value) || 0;
+                // Simple position calculation based on common dose ranges
+                const position = Math.min(Math.max(value / 100 * 100, 0), 100);
+                marker.style.left = position + '%';
+            });
+        }
+        
+        function checkInteractions(selectedCategory) {
+            const interactionResult = interactionChecker.checkRecentInteractions(selectedCategory);
+            
+            if (interactionResult.warnings.length > 0) {
+                showInteractionWarning(interactionResult);
+            } else {
+                hideInteractionWarning();
+            }
+        }
+        
+        function checkRecentInteractions() {
+            const recentSubstances = interactionChecker.getRecentSubstances(7);
+            if (recentSubstances.length > 0) {
+                const interactionResult = interactionChecker.checkMultipleInteractions(recentSubstances);
+                if (interactionResult.warnings.length > 0) {
+                    // Show persistent warning for recent interactions
+                    console.log('Recent interactions detected:', interactionResult.warnings);
+                }
+            }
+        }
+        
+        function showInteractionWarning(result) {
+            const warningElement = document.getElementById('interactionWarning');
+            const messageElement = document.getElementById('interactionMessage');
+            
+            messageElement.textContent = result.warnings[0];
+            warningElement.classList.remove('hidden');
+            
+            // Animate in
+            anime({
+                targets: warningElement,
+                translateY: [-10, 0],
+                opacity: [0, 1],
+                duration: 300,
+                easing: 'easeOutQuart'
+            });
+        }
+        
+        function hideInteractionWarning() {
+            const warningElement = document.getElementById('interactionWarning');
+            warningElement.classList.add('hidden');
+        }
+        
+        function showInteractionDetails() {
+            const selectedCategory = document.querySelector('.substance-card.border-primary')?.dataset.category;
+            if (selectedCategory) {
+                const interactionResult = interactionChecker.checkRecentInteractions(selectedCategory);
+                if (interactionResult.interactions.length > 0) {
+                    const warning = interactionChecker.formatInteractionWarning(interactionResult);
+                    alert(`${warning.title}\n\n${warning.message}\n\nAdvice:\n${warning.advice.join('\n')}`);
+                }
+            }
+        }
+        
+        function showHarmReductionTips() {
+            const tips = [
+                "Start with lower doses, especially with new substances or batches",
+                "Test your substances when possible using reagent kits",
+                "Use in safe, comfortable environments with trusted people",
+                "Avoid mixing substances, especially depressants",
+                "Stay hydrated but don't overhydrate",
+                "Have naloxone available if using opioids",
+                "Avoid using alone - have someone check on you",
+                "Know the signs of overdose and how to respond",
+                "Plan your experience and have emergency contacts ready",
+                "Trust your instincts - if something feels wrong, seek help"
+            ];
+            
+            alert(`Harm Reduction Tips:\n\n${tips.join('\n• ')}`);
+        }
+        
+        function loadRecentEntries() {
+            const entries = getRecentEntries();
+            const container = document.getElementById('recentEntries');
+            
+            if (entries.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No entries yet. Start logging above!</p>';
+                return;
+            }
+            
+            container.innerHTML = entries.map(entry => `
+                <div class="bg-white rounded-lg p-3 border border-gray-200">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="font-medium text-sm">${getCategoryEmoji(entry.category)} ${entry.category}</div>
+                            <div class="text-xs text-gray-500">${entry.dosage}${entry.unit} • ${entry.method}</div>
+                            <div class="text-xs text-gray-400">${formatTime(entry.timestamp)}</div>
+                        </div>
+                        <button class="text-primary text-xs font-medium" onclick="evaluateEntry('${entry.id}')">
+                            Evaluate
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function getCategoryEmoji(category) {
+            const emojis = {
+                'cannabis': '🌿',
+                'psychedelics': '🍄',
+                'dissociatives': '💫',
+                'stimulants': '⚡'
+            };
+            return emojis[category] || '💊';
+        }
+        
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            
+            if (diffHours < 1) return 'Just now';
+            if (diffHours < 24) return `${diffHours}h ago`;
+            return date.toLocaleDateString();
+        }
+        
+        function evaluateEntry(entryId) {
+            // Store entry ID for evaluation page
+            localStorage.setItem('evaluateEntryId', entryId);
+            window.location.href = 'evaluation.html';
+        }
+        
+        // Log substance use
+        document.getElementById('logBtn').addEventListener('click', function() {
+            const category = document.querySelector('.substance-card.border-primary')?.dataset.category;
+            const dosage = document.getElementById('dosage').value;
+            const unit = document.getElementById('unit').value;
+            const method = document.getElementById('method').value;
+            const timestamp = document.getElementById('timestamp').value;
+            const notes = document.getElementById('notes').value;
+            
+            if (!category || !dosage || !method) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Check for dangerous interactions one more time before logging
+            const interactionResult = interactionChecker.checkRecentInteractions(category);
+            if (interactionResult.riskLevel === 'high') {
+                const warning = interactionChecker.formatInteractionWarning(interactionResult);
+                if (!confirm(`⚠️ DANGEROUS COMBINATION DETECTED ⚠️\n\n${warning.message}\n\nThis combination has been associated with serious harm or death. Are you sure you want to log this?`)) {
+                    return;
+                }
+            }
+            
+            const entry = {
+                id: Date.now().toString(),
+                category,
+                dosage: parseFloat(dosage),
+                unit,
+                method,
+                timestamp: timestamp || new Date().toISOString(),
+                notes,
+                evaluated: false
+            };
+            
+            saveEntry(entry);
+            
+            // Show success message
+            this.textContent = 'Logged Successfully!';
+            this.classList.add('bg-accent');
+            setTimeout(() => {
+                this.textContent = 'Log Substance Use';
+                this.classList.remove('bg-accent');
+                resetForm();
+            }, 2000);
+            
+            loadRecentEntries();
+        });
+        
+        function resetForm() {
+            document.querySelectorAll('.substance-card').forEach(c => c.classList.remove('border-primary', 'bg-primary/5'));
+            document.getElementById('dosage').value = '';
+            document.getElementById('method').value = '';
+            document.getElementById('notes').value = '';
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('timestamp').value = now.toISOString().slice(0, 16);
+            hideInteractionWarning();
+        }
+    </script>
+</body>
+</html>

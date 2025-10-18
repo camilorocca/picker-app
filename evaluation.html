@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluate - Picker</title>
+    <meta name="description" content="Evaluate and rate your substance use experiences">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1E4D4B">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Core Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#1E4D4B',
+                        'secondary': '#E07A5F',
+                        'accent': '#81B366',
+                        'neutral': '#F4F3F1',
+                        'warning': '#F2CC8F',
+                        'text': '#2C3E50'
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        .rating-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #E07A5F 0%, #F2CC8F 50%, #81B366 100%);
+            outline: none;
+        }
+        
+        .rating-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid #1E4D4B;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .rating-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid #1E4D4B;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .mood-emoji {
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            filter: grayscale(100%);
+        }
+        
+        .mood-emoji.selected {
+            filter: grayscale(0%);
+            transform: scale(1.2);
+        }
+        
+        .star-rating {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .star {
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #d1d5db;
+            transition: all 0.2s ease;
+        }
+        
+        .star.active {
+            color: #fbbf24;
+        }
+        
+        .star:hover {
+            transform: scale(1.1);
+        }
+        
+        .nav-tab {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 3px;
+            background: #E07A5F;
+            border-radius: 2px;
+        }
+        
+        .evaluation-card {
+            transition: all 0.3s ease;
+        }
+        
+        .evaluation-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(30, 77, 75, 0.15);
+        }
+        
+        .timeline-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #81B366;
+            position: relative;
+        }
+        
+        .timeline-dot::after {
+            content: '';
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 40px;
+            background: #e5e7eb;
+        }
+        
+        .timeline-dot.last::after {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-neutral text-text font-sans pb-20">
+    <!-- Header -->
+    <div class="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-40">
+        <div class="flex items-center justify-between">
+            <h1 class="text-xl font-semibold text-primary">Evaluate Experience</h1>
+            <button id="saveBtn" class="text-primary font-medium text-sm px-4 py-2 border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors">
+                Save
+            </button>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="px-4 py-6">
+        <!-- Entry Selection -->
+        <div id="entrySelection" class="mb-6">
+            <h2 class="text-lg font-semibold mb-4">Select Entry to Evaluate</h2>
+            <div id="pendingEntries" class="space-y-3">
+                <!-- Pending entries will be populated by JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Evaluation Form -->
+        <div id="evaluationForm" class="hidden">
+            <!-- Entry Header -->
+            <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span id="entryEmoji" class="text-2xl">🌿</span>
+                            <span id="entryCategory" class="font-semibold text-lg">Cannabis</span>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            <span id="entryDosage">10mg</span> • <span id="entryMethod">Oral</span> • <span id="entryTime">2 hours ago</span>
+                        </div>
+                    </div>
+                    <button id="backBtn" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Effectiveness Rating -->
+            <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+                <h3 class="font-semibold text-primary mb-3">Effectiveness</h3>
+                <p class="text-sm text-gray-600 mb-4">How well did the substance achieve your desired effects?</p>
+                <div class="mb-4">
+                    <input type="range" id="effectiveness" class="rating-slider w-full" min="1" max="10" value="5">
+                    <div class="flex justify-between text-xs text-gray-500 mt-2">
+                        <span>1 - Poor</span>
+                        <span id="effectivenessValue">5</span>
+                        <span>10 - Excellent</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Duration Tracking -->
+            <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+                <h3 class="font-semibold text-primary mb-3">Duration</h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Onset</label>
+                        <input type="number" id="onset" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="min" min="0">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Peak</label>
+                        <input type="number" id="peak" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="min" min="0">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Total</label>
+                        <input type="number" id="total" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="min" min="0">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mood Assessment -->
+            <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+                <h3 class="font-semibold text-primary mb-3">Mood Assessment</h3>
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-sm font-medium text-gray-700 mb-2">Before</p>
+                        <div class="flex justify-between" id="moodBefore">
+                            <span class="mood-emoji" data-mood="1">😢</span>
+                            <span class="mood-emoji" data-mood="2">😐</span>
+                            <span class="mood-emoji" data-mood="3">🙂</span>
+                            <span class="mood-emoji" data-mood="4">😊</span>
+                            <span class="mood-emoji" data-mood="5">😄</span>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-700 mb-2">During</p>
+                        <div class="flex justify-between" id="moodDuring">
+                            <span class="mood-emoji" data-mood="1">😢</span>
+                            <span class="mood-emoji" data-mood="2">😐</span>
+                            <span class="mood-emoji" data-mood="3">🙂</span>
+                            <span class="mood-emoji" data-mood="4">😊</span>
+                            <span class="mood-emoji" data-mood="5">😄</span>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-700 mb-2">After</p>
+                        <div class="flex justify-between" id="moodAfter">
+                            <span class="mood-emoji" data-mood="1">😢</span>
+                            <span class="mood-emoji" data-mood="2">😐</span>
+                            <span class="mood-emoji" data-mood="3">🙂</span>
+                            <span class="mood-emoji" data-mood="4">😊</span>
+                            <span class="mood-emoji" data-mood="5">😄</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Side Effects -->
+            <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+                <h3 class="font-semibold text-primary mb-3">Side Effects</h3>
+                <div class="grid grid-cols-2 gap-2" id="sideEffects">
+                    <label class="flex items-center">
+                        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" value="nausea">
+                        <span class="ml-2 text-sm">Nausea</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" value="anxiety">
+                        <span class="ml-2 text-sm">Anxiety</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" value="dizziness">
+                        <span class="ml-2 text-sm">Dizziness</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" value="paranoia">
+                        <span class="ml-2 text-sm">Paranoia</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" value="insomnia">
+                        <span class="ml-2 text-sm">Insomnia</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" value="headache">
+                        <span class="ml-2 text-sm">Headache</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Quality Rating -->
+            <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+                <h3 class="font-semibold text-primary mb-3">Overall Quality</h3>
+                <div class="flex justify-center mb-4">
+                    <div class="star-rating" id="qualityRating">
+                        <span class="star" data-rating="1">⭐</span>
+                        <span class="star" data-rating="2">⭐</span>
+                        <span class="star" data-rating="3">⭐</span>
+                        <span class="star" data-rating="4">⭐</span>
+                        <span class="star" data-rating="5">⭐</span>
+                    </div>
+                </div>
+                <p class="text-center text-sm text-gray-600">Rate the overall quality of this experience</p>
+            </div>
+            
+            <!-- Would Repeat -->
+            <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="font-semibold text-primary">Would Repeat</h3>
+                        <p class="text-sm text-gray-600">Would you use this substance again?</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="wouldRepeat" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Detailed Notes -->
+            <div class="bg-white rounded-2xl p-4 mb-6 border border-gray-200">
+                <h3 class="font-semibold text-primary mb-3">Detailed Notes</h3>
+                <textarea id="detailedNotes" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Describe your experience in detail..."></textarea>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-50">
+        <div class="flex justify-around">
+            <a href="index.html" class="nav-tab flex flex-col items-center py-2 text-gray-500">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+                </svg>
+                <span class="text-xs mt-1">Log</span>
+            </a>
+            <a href="evaluation.html" class="nav-tab active flex flex-col items-center py-2">
+                <svg class="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <span class="text-xs mt-1 text-primary">Evaluate</span>
+            </a>
+            <a href="insights.html" class="nav-tab flex flex-col items-center py-2 text-gray-500">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
+                </svg>
+                <span class="text-xs mt-1">Insights</span>
+            </a>
+        </div>
+    </nav>
+    
+    <script src="main.js"></script>
+    <script>
+        let currentEntry = null;
+        let evaluationData = {
+            effectiveness: 5,
+            moodBefore: null,
+            moodDuring: null,
+            moodAfter: null,
+            sideEffects: [],
+            quality: 0,
+            wouldRepeat: false,
+            notes: ''
+        };
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPendingEntries();
+            initializeEvaluationForm();
+            
+            // Check if there's a specific entry to evaluate
+            const entryId = localStorage.getItem('evaluateEntryId');
+            if (entryId) {
+                selectEntry(entryId);
+                localStorage.removeItem('evaluateEntryId');
+            }
+        });
+        
+        function loadPendingEntries() {
+            const entries = getPendingEvaluations();
+            const container = document.getElementById('pendingEntries');
+            
+            if (entries.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <h3 class="font-medium text-gray-900 mb-2">All Caught Up!</h3>
+                        <p class="text-sm text-gray-600">No pending evaluations. Great job tracking your experiences.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = entries.map(entry => `
+                <div class="evaluation-card bg-white rounded-lg p-4 border border-gray-200 cursor-pointer" onclick="selectEntry('${entry.id}')">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="timeline-dot ${entry.id === entries[entries.length - 1].id ? 'last' : ''}"></div>
+                            <div>
+                                <div class="font-medium">${getCategoryEmoji(entry.category)} ${entry.category}</div>
+                                <div class="text-sm text-gray-600">${entry.dosage}${entry.unit} • ${entry.method}</div>
+                                <div class="text-xs text-gray-500">${formatTime(entry.timestamp)}</div>
+                            </div>
+                        </div>
+                        <div class="text-primary text-sm font-medium">
+                            Evaluate →
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function selectEntry(entryId) {
+            currentEntry = getEntryById(entryId);
+            if (!currentEntry) return;
+            
+            // Hide entry selection, show evaluation form
+            document.getElementById('entrySelection').classList.add('hidden');
+            document.getElementById('evaluationForm').classList.remove('hidden');
+            
+            // Populate entry header
+            document.getElementById('entryEmoji').textContent = getCategoryEmoji(currentEntry.category);
+            document.getElementById('entryCategory').textContent = currentEntry.category;
+            document.getElementById('entryDosage').textContent = `${currentEntry.dosage}${currentEntry.unit}`;
+            document.getElementById('entryMethod').textContent = currentEntry.method;
+            document.getElementById('entryTime').textContent = formatTime(currentEntry.timestamp);
+            
+            // Reset evaluation data
+            evaluationData = {
+                effectiveness: 5,
+                moodBefore: null,
+                moodDuring: null,
+                moodAfter: null,
+                sideEffects: [],
+                quality: 0,
+                wouldRepeat: false,
+                notes: ''
+            };
+            
+            // Reset form
+            resetEvaluationForm();
+        }
+        
+        function initializeEvaluationForm() {
+            // Effectiveness slider
+            const effectivenessSlider = document.getElementById('effectiveness');
+            const effectivenessValue = document.getElementById('effectivenessValue');
+            
+            effectivenessSlider.addEventListener('input', function() {
+                evaluationData.effectiveness = parseInt(this.value);
+                effectivenessValue.textContent = this.value;
+            });
+            
+            // Mood selection
+            ['moodBefore', 'moodDuring', 'moodAfter'].forEach(moodType => {
+                const container = document.getElementById(moodType);
+                const emojis = container.querySelectorAll('.mood-emoji');
+                
+                emojis.forEach(emoji => {
+                    emoji.addEventListener('click', function() {
+                        // Remove selection from siblings
+                        emojis.forEach(e => e.classList.remove('selected'));
+                        // Add selection to clicked emoji
+                        this.classList.add('selected');
+                        
+                        // Update evaluation data
+                        const moodValue = parseInt(this.dataset.mood);
+                        if (moodType === 'moodBefore') evaluationData.moodBefore = moodValue;
+                        if (moodType === 'moodDuring') evaluationData.moodDuring = moodValue;
+                        if (moodType === 'moodAfter') evaluationData.moodAfter = moodValue;
+                    });
+                });
+            });
+            
+            // Side effects
+            const sideEffectCheckboxes = document.querySelectorAll('#sideEffects input[type="checkbox"]');
+            sideEffectCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        evaluationData.sideEffects.push(this.value);
+                    } else {
+                        evaluationData.sideEffects = evaluationData.sideEffects.filter(effect => effect !== this.value);
+                    }
+                });
+            });
+            
+            // Quality rating
+            const stars = document.querySelectorAll('#qualityRating .star');
+            stars.forEach(star => {
+                star.addEventListener('click', function() {
+                    const rating = parseInt(this.dataset.rating);
+                    evaluationData.quality = rating;
+                    
+                    // Update star display
+                    stars.forEach((s, index) => {
+                        if (index < rating) {
+                            s.classList.add('active');
+                        } else {
+                            s.classList.remove('active');
+                        }
+                    });
+                });
+            });
+            
+            // Would repeat toggle
+            document.getElementById('wouldRepeat').addEventListener('change', function() {
+                evaluationData.wouldRepeat = this.checked;
+            });
+            
+            // Notes
+            document.getElementById('detailedNotes').addEventListener('input', function() {
+                evaluationData.notes = this.value;
+            });
+            
+            // Back button
+            document.getElementById('backBtn').addEventListener('click', function() {
+                document.getElementById('evaluationForm').classList.add('hidden');
+                document.getElementById('entrySelection').classList.remove('hidden');
+            });
+            
+            // Save button
+            document.getElementById('saveBtn').addEventListener('click', saveEvaluation);
+        }
+        
+        function resetEvaluationForm() {
+            // Reset sliders and inputs
+            document.getElementById('effectiveness').value = 5;
+            document.getElementById('effectivenessValue').textContent = '5';
+            document.getElementById('onset').value = '';
+            document.getElementById('peak').value = '';
+            document.getElementById('total').value = '';
+            document.getElementById('wouldRepeat').checked = false;
+            document.getElementById('detailedNotes').value = '';
+            
+            // Reset mood selection
+            document.querySelectorAll('.mood-emoji').forEach(emoji => {
+                emoji.classList.remove('selected');
+            });
+            
+            // Reset side effects
+            document.querySelectorAll('#sideEffects input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            // Reset quality rating
+            document.querySelectorAll('#qualityRating .star').forEach(star => {
+                star.classList.remove('active');
+            });
+        }
+        
+        function saveEvaluation() {
+            if (!currentEntry) return;
+            
+            // Add timing data to evaluation
+            evaluationData.onset = parseInt(document.getElementById('onset').value) || null;
+            evaluationData.peak = parseInt(document.getElementById('peak').value) || null;
+            evaluationData.total = parseInt(document.getElementById('total').value) || null;
+            
+            // Save evaluation
+            const evaluation = {
+                entryId: currentEntry.id,
+                timestamp: new Date().toISOString(),
+                ...evaluationData
+            };
+            
+            saveEvaluationData(evaluation);
+            
+            // Mark entry as evaluated
+            markEntryAsEvaluated(currentEntry.id);
+            
+            // Show success message
+            showSuccessMessage();
+            
+            // Reload pending entries
+            setTimeout(() => {
+                document.getElementById('evaluationForm').classList.add('hidden');
+                document.getElementById('entrySelection').classList.remove('hidden');
+                loadPendingEntries();
+            }, 2000);
+        }
+        
+        function showSuccessMessage() {
+            const message = document.createElement('div');
+            message.className = 'fixed top-20 left-4 right-4 bg-accent text-white p-4 rounded-lg shadow-lg z-50';
+            message.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <div>
+                        <div class="font-medium">Evaluation Saved!</div>
+                        <div class="text-sm opacity-90">Your experience has been recorded</div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(message);
+            
+            setTimeout(() => {
+                message.remove();
+            }, 3000);
+        }
+        
+        // Helper functions
+        function getCategoryEmoji(category) {
+            const emojis = {
+                'cannabis': '🌿',
+                'psychedelics': '🍄',
+                'dissociatives': '💫',
+                'stimulants': '⚡'
+            };
+            return emojis[category] || '💊';
+        }
+        
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            
+            if (diffHours < 1) return 'Just now';
+            if (diffHours < 24) return `${diffHours}h ago`;
+            return date.toLocaleDateString();
+        }
+    </script>
+</body>
+</html>
